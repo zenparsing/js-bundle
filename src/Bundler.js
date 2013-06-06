@@ -36,28 +36,43 @@ export function bundle(rootPath) {
     
     var nodes = new StringMap,
         nodeNames = new StringSet,
-        sort = [];
+        sort = [],
+        pending = 0,
+        resolver,
+        allFetched = new Promise(r => resolver = r);
     
     function visit(path) {
 
         if (nodes.has(path))
-            return Promise.resolve(null);
+            return;
+        
+        nodes.set(path, null);
+        pending += 1;
         
         var dir = Path.dirname(path);
         
-        return AFS.readFile(path, { encoding: "utf8" }).then(code => {
+        AFS.readFile(path, { encoding: "utf8" }).then(code => {
     
             var node = analyze(code, p => EXTERNAL_URL.test(p) ? null : Path.resolve(dir, p));
             
+            nodes.set(path, node);
             node.path = path;
             node.source = code;
             node.visited = false;
             node.inEdges = new StringSet;
             node.name = "";
             
-            nodes.set(path, node);
+            node.edges.keys().forEach(visit);
             
-            return forEachPromise(node.edges.keys(), visit);
+            pending -= 1;
+            
+            if (pending === 0)
+                resolver.resolve(null);
+        
+        }).catch(err => {
+        
+            resolver.reject(err);
+            
         });
     }
     
@@ -132,7 +147,9 @@ export function bundle(rootPath) {
         return source;
     }
     
-    return visit(rootPath).then($=> {
+    visit(rootPath);
+    
+    return allFetched.then($=> {
     
         traverse(rootPath, null);
         assignNames();
