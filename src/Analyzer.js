@@ -1,6 +1,5 @@
-import { parseModule, forEachChild } from "Parser.js";
-import { StringSet } from "StringSet.js";
-import { StringMap } from "StringMap.js";
+import { parseModule } from "package:es6parse";
+import { StringSet, StringMap } from "package:zen-bits";
 
 export function parse(code) { 
 
@@ -26,9 +25,10 @@ export function analyze(ast, resolvePath) {
         
         switch (node.type) {
         
-            case "ExportSpecifierSet":
+            case "ExportsList":
             case "ImportDeclaration":
-            case "ModuleFromDeclaration":
+            case "ImportDefaultDeclaration":
+            case "ModuleImport":
                 
                 addEdge(node.from);
                 break;
@@ -40,6 +40,7 @@ export function analyze(ast, resolvePath) {
                 
                 break;
             
+            // TODO: Add generator, block (let, const, function in block)?
             case "ClassExpression":
             case "ClassBody":
             case "FunctionExpression":
@@ -51,7 +52,7 @@ export function analyze(ast, resolvePath) {
                 
         }
         
-        forEachChild(node, node => visit(node, topLevel));
+        node.forEachChild(child => visit(child, topLevel));
     }
     
     function addEdge(spec) {

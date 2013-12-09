@@ -1,23 +1,27 @@
-import { bundle } from "Bundler.js";
-import { writeFile } from "AsyncFS.js";
-import { ConsoleCommand } from "ConsoleCommand.js";
+import { createBundle } from "Bundler.js";
+import { AsyncFS, ConsoleCommand } from "package:zen-bits";
+export { createBundle };
 
-new ConsoleCommand({
+export function main() {
 
-    params: {
+    new ConsoleCommand({
+
+        params: {
     
-        "input": { short: "i", positional: true, required: true },
-        "output": { short: "o", positional: true, required: false }
-    },
+            "input": { short: "i", positional: true, required: true },
+            "output": { short: "o", positional: true, required: false }
+        },
     
-    execute(options) {
+        execute(options) {
 
-        bundle(options.input).then(code => {
+            createBundle(options.input).then(code => {
         
-            return options.output ?
-                writeFile(options.output, code) :
-                console.log(code);
-        });
-    }
+                return options.output ?
+                    AsyncFS.writeFile(options.output, code) :
+                    console.log(code);
+            });
+        }
     
-}).run();
+    }).run();
+    
+}

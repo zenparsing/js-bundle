@@ -1,9 +1,6 @@
-module AFS from "AsyncFS.js";
 module Path from "node:path";
 
-import { Promise, forEach as forEachPromise } from "Promise.js";
-import { StringMap } from "StringMap.js";
-import { StringSet } from "StringSet.js";
+import { AsyncFS, StringMap, StringSet } from "package:zen-bits";
 import { analyze } from "Analyzer.js";
 
 var EXTERNAL_URL = /[a-z][a-z]+:/i;
@@ -30,16 +27,19 @@ function identFromPath(path) {
     return name;
 }
 
-export function bundle(rootPath) {
+export function createBundle(rootPath, locatePackage) {
     
     rootPath = Path.resolve(rootPath);
+    locatePackage = locatePackage || (x => x);
     
     var nodes = new StringMap,
         nodeNames = new StringSet,
         sort = [],
         pending = 0,
         resolver,
-        allFetched = new Promise(r => resolver = r);
+        allFetched;
+    
+    allFetched = new Promise((resolve, reject) => resolver = { resolve, reject });
     
     function visit(path) {
 
@@ -51,9 +51,15 @@ export function bundle(rootPath) {
         
         var dir = Path.dirname(path);
         
-        AFS.readFile(path, { encoding: "utf8" }).then(code => {
+        AsyncFS.readFile(path, { encoding: "utf8" }).then(code => {
     
-            var node = analyze(code, p => EXTERNAL_URL.test(p) ? null : Path.resolve(dir, p));
+            var node = analyze(code, p => {
+            
+                try { p = locatePackage(p) }
+                catch (x) {}
+                
+                return EXTERNAL_URL.test(p) ? null : Path.resolve(dir, p);
+            });
             
             nodes.set(path, node);
             node.path = path;
