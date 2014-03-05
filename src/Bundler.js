@@ -75,8 +75,11 @@ export function createBundle(rootPath, locatePackage) {
             if (pending === 0)
                 resolver.resolve(null);
         
-        }).catch(err => {
+        }).then(null, err => {
         
+            if (err instanceof SyntaxError && "sourceText" in err)
+                err.filename = path;
+            
             resolver.reject(err);
             
         });
